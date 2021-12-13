@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "buffer/lru_replacer.h"
+#include "algorithm"
 
 namespace bustub {
 
@@ -18,12 +19,45 @@ LRUReplacer::LRUReplacer(size_t num_pages) {}
 
 LRUReplacer::~LRUReplacer() = default;
 
-bool LRUReplacer::Victim(frame_id_t *frame_id) { return false; }
+bool LRUReplacer::Victim(frame_id_t *frame_id) {
+  mtx_.lock();
 
-void LRUReplacer::Pin(frame_id_t frame_id) {}
+  if (ls_.empty()) {
+    mtx_.unlock();
+    return false;
+  }
 
-void LRUReplacer::Unpin(frame_id_t frame_id) {}
+  *frame_id = ls_.front();
+  ls_.pop_front();
 
-size_t LRUReplacer::Size() { return 0; }
+  mtx_.unlock();
+  return true;
+}
+
+void LRUReplacer::Pin(frame_id_t frame_id) {
+  mtx_.lock();
+
+  auto it = std::find(ls_.begin(), ls_.end(), frame_id);
+  if (it != ls_.end()) {
+    ls_.erase(it);
+  }
+
+  mtx_.unlock();
+}
+
+void LRUReplacer::Unpin(frame_id_t frame_id) {
+  mtx_.lock();
+  auto it = std::find(ls_.begin(), ls_.end(), frame_id);
+  if (it != ls_.end()) {
+    mtx_.unlock();
+    return;
+  }
+  ls_.emplace_back(frame_id);
+  mtx_.unlock();
+}
+
+size_t LRUReplacer::Size() {
+  return ls_.size();
+}
 
 }  // namespace bustub

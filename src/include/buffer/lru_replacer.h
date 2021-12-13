@@ -26,6 +26,9 @@ namespace bustub {
  */
 class LRUReplacer : public Replacer {
  public:
+  std::list<frame_id_t> ls_;
+  std::mutex mtx_;
+
   /**
    * Create a new LRUReplacer.
    * @param num_pages the maximum number of pages the LRUReplacer will be required to store
