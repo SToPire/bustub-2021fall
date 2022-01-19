@@ -224,7 +224,8 @@ bool BufferPoolManagerInstance::UnpinPgImp(page_id_t page_id, bool is_dirty) {
   latch_.lock();
   auto it = page_table_.find(page_id);
   if (it == page_table_.end()) {
-    BUSTUB_ASSERT(0, "page_id does not exist");
+    latch_.unlock();
+    return false;
   }
   frame_id_t frame_id = it->second;
   Page *page = pages_ + frame_id;

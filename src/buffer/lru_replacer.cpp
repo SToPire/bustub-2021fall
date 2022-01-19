@@ -11,7 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "buffer/lru_replacer.h"
+#include <list>
+#include <mutex>
 #include "algorithm"
+#include "common/config.h"
 
 namespace bustub {
 
@@ -20,43 +23,38 @@ LRUReplacer::LRUReplacer(size_t num_pages) {}
 LRUReplacer::~LRUReplacer() = default;
 
 bool LRUReplacer::Victim(frame_id_t *frame_id) {
-  mtx_.lock();
-
+  std::lock_guard<std::mutex> lock_guard(mtx_);
   if (ls_.empty()) {
-    mtx_.unlock();
     return false;
   }
 
-  *frame_id = ls_.front();
-  ls_.pop_front();
+  *frame_id = ls_.back();
+  ls_.pop_back();
+  mp_.erase(*frame_id);
 
-  mtx_.unlock();
   return true;
 }
 
 void LRUReplacer::Pin(frame_id_t frame_id) {
-  mtx_.lock();
-
-  auto it = std::find(ls_.begin(), ls_.end(), frame_id);
-  if (it != ls_.end()) {
-    ls_.erase(it);
+  std::lock_guard<std::mutex> lock_guard(mtx_);
+  auto it = mp_.find(frame_id);
+  if (it != mp_.end()) {
+    ls_.erase(it->second);
+    mp_.erase(it);
   }
-
-  mtx_.unlock();
 }
 
 void LRUReplacer::Unpin(frame_id_t frame_id) {
-  mtx_.lock();
-  auto it = std::find(ls_.begin(), ls_.end(), frame_id);
-  if (it != ls_.end()) {
-    mtx_.unlock();
-    return;
+  std::lock_guard<std::mutex> lock_guard(mtx_);
+  auto it = mp_.find(frame_id);
+  if (it == mp_.end()) {
+    ls_.emplace_front(frame_id);
+    mp_[frame_id] = ls_.begin();
   }
-  ls_.emplace_back(frame_id);
-  mtx_.unlock();
 }
 
 size_t LRUReplacer::Size() {
+  std::lock_guard<std::mutex> lock_guard(mtx_);
   return ls_.size();
 }
 
