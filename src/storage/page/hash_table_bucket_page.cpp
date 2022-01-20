@@ -11,71 +11,112 @@
 //===----------------------------------------------------------------------===//
 
 #include "storage/page/hash_table_bucket_page.h"
+#include <algorithm>
+#include <cstdint>
+#include <utility>
 #include "common/logger.h"
 #include "common/util/hash_util.h"
 #include "storage/index/generic_key.h"
 #include "storage/index/hash_comparator.h"
+#include "storage/page/hash_table_page_defs.h"
 #include "storage/table/tmp_tuple.h"
 
 namespace bustub {
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
 bool HASH_TABLE_BUCKET_TYPE::GetValue(KeyType key, KeyComparator cmp, std::vector<ValueType> *result) {
-  return false;
+  for (uint32_t i = 0; i < BUCKET_ARRAY_SIZE; i++) {
+    if (IsReadable(i) && cmp(key, KeyAt(i)) == 0) {
+      result->push_back(ValueAt(i));
+    }
+  }
+  return !static_cast<bool>(result->empty());
 }
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
 bool HASH_TABLE_BUCKET_TYPE::Insert(KeyType key, ValueType value, KeyComparator cmp) {
-  return true;
+  for (uint32_t i = 0; i < BUCKET_ARRAY_SIZE; i++) {
+    if (IsReadable(i) && cmp(key, KeyAt(i)) == 0 && value == ValueAt(i)) {
+      return false;
+    }
+  }
+  for (uint32_t i = 0; i < BUCKET_ARRAY_SIZE; i++) {
+    if (!IsReadable(i)) {
+      SetOccupied(i);
+      SetReadable(i);
+      array_[i] = std::make_pair(key, value);
+      return true;
+    }
+  }
+  return false;
 }
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
 bool HASH_TABLE_BUCKET_TYPE::Remove(KeyType key, ValueType value, KeyComparator cmp) {
+  for (uint32_t i = 0; i < BUCKET_ARRAY_SIZE; i++) {
+    if (IsReadable(i) && cmp(key, KeyAt(i)) == 0 && value == ValueAt(i)) {
+      RemoveAt(i);
+      readable_[i / 8] &= ~(1 << i % 8);
+      return true;
+    }
+  }
   return false;
 }
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
 KeyType HASH_TABLE_BUCKET_TYPE::KeyAt(uint32_t bucket_idx) const {
-  return {};
+  return array_[bucket_idx].first;
 }
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
 ValueType HASH_TABLE_BUCKET_TYPE::ValueAt(uint32_t bucket_idx) const {
-  return {};
+  return array_[bucket_idx].second;
 }
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
-void HASH_TABLE_BUCKET_TYPE::RemoveAt(uint32_t bucket_idx) {}
+void HASH_TABLE_BUCKET_TYPE::RemoveAt(uint32_t bucket_idx) {
+  array_[bucket_idx] = std::pair<KeyType, ValueType>();
+}
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
 bool HASH_TABLE_BUCKET_TYPE::IsOccupied(uint32_t bucket_idx) const {
-  return false;
+  return occupied_[bucket_idx / 8] & (1 << bucket_idx % 8);
 }
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
-void HASH_TABLE_BUCKET_TYPE::SetOccupied(uint32_t bucket_idx) {}
+void HASH_TABLE_BUCKET_TYPE::SetOccupied(uint32_t bucket_idx) {
+  occupied_[bucket_idx / 8] |= (1 << bucket_idx % 8);
+}
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
 bool HASH_TABLE_BUCKET_TYPE::IsReadable(uint32_t bucket_idx) const {
-  return false;
+  return readable_[bucket_idx / 8] & (1 << bucket_idx % 8);
 }
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
-void HASH_TABLE_BUCKET_TYPE::SetReadable(uint32_t bucket_idx) {}
+void HASH_TABLE_BUCKET_TYPE::SetReadable(uint32_t bucket_idx) {
+  readable_[bucket_idx / 8] |= (1 << bucket_idx % 8);
+}
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
 bool HASH_TABLE_BUCKET_TYPE::IsFull() {
-  return false;
+  return NumReadable() == BUCKET_ARRAY_SIZE;
 }
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
 uint32_t HASH_TABLE_BUCKET_TYPE::NumReadable() {
-  return 0;
+  uint32_t res = 0;
+  for (uint32_t i = 0; i < BUCKET_ARRAY_SIZE; i++) {
+    if (IsReadable(i)) {
+      res++;
+    }
+  }
+  return res;
 }
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
 bool HASH_TABLE_BUCKET_TYPE::IsEmpty() {
-  return false;
+  return NumReadable() == 0;
 }
 
 template <typename KeyType, typename ValueType, typename KeyComparator>

@@ -72,7 +72,6 @@ Page *ParallelBufferPoolManager::NewPgImp(page_id_t *page_id) {
     page = bpms_[cur_index]->NewPage(page_id);
     cur_index = (cur_index + 1) % num_instances_;
     if (page != nullptr) {
-      //++new_pg_start_index_;
       break;
     }
   } while (cur_index != new_pg_start_index_);

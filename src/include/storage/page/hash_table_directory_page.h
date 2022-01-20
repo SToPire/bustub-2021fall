@@ -75,6 +75,7 @@ class HashTableDirectoryPage {
 
   /**
    * Gets the split image of an index
+   * e.g. bucket 2(010)'s split image is bucket 6(110) when local depth of bucket 2 is 3.
    *
    * @param bucket_idx the directory index for which to find the split image
    * @return the directory index of the split image

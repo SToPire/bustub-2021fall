@@ -12,7 +12,6 @@
 
 #include "buffer/lru_replacer.h"
 #include <list>
-#include <mutex>
 #include "algorithm"
 #include "common/config.h"
 
