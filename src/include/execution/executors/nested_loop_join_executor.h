@@ -55,6 +55,19 @@ class NestedLoopJoinExecutor : public AbstractExecutor {
  private:
   /** The NestedLoopJoin plan node to be executed. */
   const NestedLoopJoinPlanNode *plan_;
+
+  std::unique_ptr<AbstractExecutor> left_executor_;
+  std::unique_ptr<AbstractExecutor> right_executor_;
+
+  Tuple cur_left_;
+  bool is_dummy_left_;
+
+  /* output schema column cnt */
+  uint32_t column_cnt_;
+
+  /* determine whether output column come from left or right */
+  /* It's not graceful, maybe better approach? */
+  std::vector<uint32_t> left_or_right_;
 };
 
 }  // namespace bustub
