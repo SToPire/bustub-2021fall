@@ -67,8 +67,7 @@ bool InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
   /* insert successfully, update index */
   for (auto &index_info : indexes_) {
     index_info->index_->InsertEntry(
-        tuple->KeyFromTuple(*tuple_schema, index_info->key_schema_, index_info->index_->GetKeyAttrs()), *rid,
-        txn);
+        tuple->KeyFromTuple(*tuple_schema, index_info->key_schema_, index_info->index_->GetKeyAttrs()), *rid, txn);
   }
 
   return true;

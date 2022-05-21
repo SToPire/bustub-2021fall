@@ -224,7 +224,7 @@ TEST_F(ExecutorTest, SimpleRawInsertWithIndexTest) {
 
   // Execute the insert
   GetExecutionEngine()->Execute(&insert_plan, nullptr, GetTxn(), GetExecutorContext());
-  
+
   // Iterate through table make sure that values were inserted.
 
   // SELECT * FROM empty_table2;
