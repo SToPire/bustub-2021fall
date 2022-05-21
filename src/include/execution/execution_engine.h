@@ -60,7 +60,7 @@ class ExecutionEngine {
       Tuple tuple;
       RID rid;
       while (executor->Next(&tuple, &rid)) {
-        if (result_set != nullptr) {
+        if (result_set != nullptr && !NoModifyResultSet(plan)) {
           result_set->push_back(tuple);
         }
       }
@@ -72,6 +72,11 @@ class ExecutionEngine {
   }
 
  private:
+  bool NoModifyResultSet(const AbstractPlanNode *plan) {
+    enum PlanType type = plan->GetType();
+    return type == PlanType::Insert || type == PlanType::Update || type == PlanType::Delete;
+  }
+
   /** The buffer pool manager used during query execution */
   [[maybe_unused]] BufferPoolManager *bpm_;
   /** The transaction manager used during query execution */

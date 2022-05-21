@@ -18,10 +18,29 @@ namespace bustub {
 
 DeleteExecutor::DeleteExecutor(ExecutorContext *exec_ctx, const DeletePlanNode *plan,
                                std::unique_ptr<AbstractExecutor> &&child_executor)
-    : AbstractExecutor(exec_ctx) {}
+    : AbstractExecutor(exec_ctx), plan_(plan), child_executor_(std::move(child_executor)) {}
 
-void DeleteExecutor::Init() {}
+void DeleteExecutor::Init() {
+  table_info_ = exec_ctx_->GetCatalog()->GetTable(plan_->TableOid());
+  indexes_ = exec_ctx_->GetCatalog()->GetTableIndexes(table_info_->name_);
 
-bool DeleteExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) { return false; }
+  child_executor_->Init();
+}
+
+bool DeleteExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
+  Transaction *txn = exec_ctx_->GetTransaction();
+  if (child_executor_->Next(tuple, rid)) {
+    if (!table_info_->table_->MarkDelete(*rid, txn)) {
+      return false;
+    }
+
+    for (auto &index_info : indexes_) {
+      index_info->index_->DeleteEntry(*tuple, *rid, txn);
+    }
+    return true;
+  }
+
+  return false;
+}
 
 }  // namespace bustub

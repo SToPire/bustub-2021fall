@@ -33,17 +33,21 @@ void InsertExecutor::Init() {
 }
 
 bool InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
+  Transaction *txn = exec_ctx_->GetTransaction();
+
   if (plan_->IsRawInsert()) {
     do {
       if (cur_size_ == total_size_) {
         return false;
       }
       *tuple = Tuple(plan_->RawValuesAt(cur_size_++), &table_->schema_);
-    } while (!table_->table_->InsertTuple(*tuple, rid, exec_ctx_->GetTransaction()));
+    } while (!table_->table_->InsertTuple(*tuple, rid, txn));
   } else {
     /* select insert */
     if (child_executor_->Next(tuple, rid)) {
-      table_->table_->InsertTuple(*tuple, rid, exec_ctx_->GetTransaction());
+      if (!table_->table_->InsertTuple(*tuple, rid, txn)) {
+        return false;
+      }
     } else {
       return false;
     }
@@ -51,7 +55,7 @@ bool InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
 
   /* insert successfully, update index */
   for (auto &index_info : indexes_) {
-    index_info->index_->InsertEntry(*tuple, *rid, exec_ctx_->GetTransaction());
+    index_info->index_->InsertEntry(*tuple, *rid, txn);
   }
 
   return true;

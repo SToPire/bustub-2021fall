@@ -271,7 +271,7 @@ TEST_F(ExecutorTest, SimpleRawInsertWithIndexTest) {
 }
 
 // UPDATE test_3 SET colB = colB + 1;
-TEST_F(ExecutorTest, DISABLED_SimpleUpdateTest) {
+TEST_F(ExecutorTest, SimpleUpdateTest) {
   // Construct a sequential scan of the table
   const Schema *out_schema{};
   std::unique_ptr<AbstractPlanNode> scan_plan{};
@@ -330,7 +330,7 @@ TEST_F(ExecutorTest, DISABLED_SimpleUpdateTest) {
 }
 
 // DELETE FROM test_1 WHERE col_a == 50;
-TEST_F(ExecutorTest, DISABLED_SimpleDeleteTest) {
+TEST_F(ExecutorTest, SimpleDeleteTest) {
   // Construct query plan
   auto table_info = GetExecutorContext()->GetCatalog()->GetTable("test_1");
   auto &schema = table_info->schema_;
@@ -361,7 +361,6 @@ TEST_F(ExecutorTest, DISABLED_SimpleDeleteTest) {
   std::unique_ptr<AbstractPlanNode> delete_plan;
   { delete_plan = std::make_unique<DeletePlanNode>(scan_plan1.get(), table_info->oid_); }
   GetExecutionEngine()->Execute(delete_plan.get(), nullptr, GetTxn(), GetExecutorContext());
-
   result_set.clear();
 
   // SELECT col_a FROM test_1 WHERE col_a == 50
