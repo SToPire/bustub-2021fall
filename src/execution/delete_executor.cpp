@@ -35,7 +35,9 @@ bool DeleteExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
     }
 
     for (auto &index_info : indexes_) {
-      index_info->index_->DeleteEntry(*tuple, *rid, txn);
+      index_info->index_->DeleteEntry(tuple->KeyFromTuple(*child_executor_->GetOutputSchema(), index_info->key_schema_,
+                                                          index_info->index_->GetKeyAttrs()),
+                                      *rid, txn);
     }
     return true;
   }

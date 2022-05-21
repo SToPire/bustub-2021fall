@@ -21,41 +21,54 @@ InsertExecutor::InsertExecutor(ExecutorContext *exec_ctx, const InsertPlanNode *
     : AbstractExecutor(exec_ctx), plan_(plan), child_executor_(std::move(child_executor)) {}
 
 void InsertExecutor::Init() {
-  table_ = exec_ctx_->GetCatalog()->GetTable(plan_->TableOid());
-  indexes_ = exec_ctx_->GetCatalog()->GetTableIndexes(table_->name_);
+  table_info_ = exec_ctx_->GetCatalog()->GetTable(plan_->TableOid());
+  indexes_ = exec_ctx_->GetCatalog()->GetTableIndexes(table_info_->name_);
 
   if (plan_->IsRawInsert()) {
     total_size_ = plan_->RawValues().size();
     cur_size_ = 0;
   } else {
     child_executor_->Init();
+
+    // schema check
+    assert(table_info_->schema_.GetColumnCount() == child_executor_->GetOutputSchema()->GetColumnCount());
+    for (uint32_t i = 0; i < table_info_->schema_.GetColumnCount(); i++) {
+      assert(table_info_->schema_.GetColumn(i).GetType() == child_executor_->GetOutputSchema()->GetColumn(i).GetType());
+    }
   }
 }
 
 bool InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
   Transaction *txn = exec_ctx_->GetTransaction();
+  const Schema *tuple_schema;
 
   if (plan_->IsRawInsert()) {
     do {
       if (cur_size_ == total_size_) {
         return false;
       }
-      *tuple = Tuple(plan_->RawValuesAt(cur_size_++), &table_->schema_);
-    } while (!table_->table_->InsertTuple(*tuple, rid, txn));
+      *tuple = Tuple(plan_->RawValuesAt(cur_size_++), &table_info_->schema_);
+    } while (!table_info_->table_->InsertTuple(*tuple, rid, txn));
+
+    tuple_schema = &table_info_->schema_;
   } else {
     /* select insert */
     if (child_executor_->Next(tuple, rid)) {
-      if (!table_->table_->InsertTuple(*tuple, rid, txn)) {
+      if (!table_info_->table_->InsertTuple(*tuple, rid, txn)) {
         return false;
       }
     } else {
       return false;
     }
+
+    tuple_schema = child_executor_->GetOutputSchema();
   }
 
   /* insert successfully, update index */
   for (auto &index_info : indexes_) {
-    index_info->index_->InsertEntry(*tuple, *rid, txn);
+    index_info->index_->InsertEntry(
+        tuple->KeyFromTuple(*tuple_schema, index_info->key_schema_, index_info->index_->GetKeyAttrs()), *rid,
+        txn);
   }
 
   return true;

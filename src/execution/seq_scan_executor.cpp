@@ -21,10 +21,10 @@ SeqScanExecutor::SeqScanExecutor(ExecutorContext *exec_ctx, const SeqScanPlanNod
       end_(nullptr, RID(INVALID_PAGE_ID, 0), nullptr) {}
 
 void SeqScanExecutor::Init() {
-  TableInfo *table = exec_ctx_->GetCatalog()->GetTable(plan_->GetTableOid());
+  table_info_ = exec_ctx_->GetCatalog()->GetTable(plan_->GetTableOid());
 
-  cur_ = table->table_->Begin(exec_ctx_->GetTransaction());
-  end_ = table->table_->End();
+  cur_ = table_info_->table_->Begin(exec_ctx_->GetTransaction());
+  end_ = table_info_->table_->End();
 }
 
 bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
@@ -33,6 +33,15 @@ bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
     *tuple = *cur_++;
     if ((plan_->GetPredicate() == nullptr) ||
         plan_->GetPredicate()->Evaluate(tuple, plan_->OutputSchema()).GetAs<bool>()) {
+      
+      /* we must return tuple with output schema instead of table schema */
+      std::vector<Value> values;
+      for (auto &output_column : plan_->OutputSchema()->GetColumns()) {
+        values.push_back(tuple->GetValue(&table_info_->schema_, table_info_->schema_.GetColIdx(output_column.GetName())));
+      }
+
+      *tuple = Tuple(values, plan_->OutputSchema());
+
       return true;
     }
   }
