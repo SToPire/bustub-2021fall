@@ -13,10 +13,13 @@
 #pragma once
 
 #include <memory>
+#include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include "execution/executor_context.h"
 #include "execution/executors/abstract_executor.h"
+#include "execution/expressions/abstract_expression.h"
 #include "execution/plans/hash_join_plan.h"
 #include "storage/table/tuple.h"
 
@@ -52,8 +55,38 @@ class HashJoinExecutor : public AbstractExecutor {
   const Schema *GetOutputSchema() override { return plan_->OutputSchema(); };
 
  private:
+  HashJoinKey GetLeftJoinKey(const Tuple *tuple) {
+    std::vector<Value> keys;
+    keys.emplace_back(plan_->LeftJoinKeyExpression()->Evaluate(tuple, left_executor_->GetOutputSchema()));
+    return {keys};
+  }
+
+  HashJoinKey GetRightJoinKey(const Tuple *tuple) {
+    std::vector<Value> keys;
+    keys.emplace_back(plan_->RightJoinKeyExpression()->Evaluate(tuple, right_executor_->GetOutputSchema()));
+    return {keys};
+  }
+
+ private:
   /** The NestedLoopJoin plan node to be executed. */
   const HashJoinPlanNode *plan_;
+
+  std::unique_ptr<AbstractExecutor> left_executor_;
+  std::unique_ptr<AbstractExecutor> right_executor_;
+
+  bool first_next_;
+
+  std::unordered_map<HashJoinKey, std::vector<Tuple>> ht_;
+
+  /* output schema column cnt */
+  uint32_t column_cnt_;
+
+  /* determine whether output column come from left or right */
+  /* It's not graceful, maybe better approach? */
+  std::vector<uint32_t> left_or_right_;
+
+  std::vector<Tuple> res_;
+  std::vector<Tuple>::iterator res_iterator_;
 };
 
 }  // namespace bustub

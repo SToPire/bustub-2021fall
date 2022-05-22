@@ -13,9 +13,13 @@
 #pragma once
 
 #include <memory>
+#include <unordered_set>
 #include <utility>
+#include <vector>
 
+#include "catalog/schema.h"
 #include "execution/executors/abstract_executor.h"
+#include "execution/expressions/abstract_expression.h"
 #include "execution/plans/distinct_plan.h"
 
 namespace bustub {
@@ -49,9 +53,22 @@ class DistinctExecutor : public AbstractExecutor {
   const Schema *GetOutputSchema() override { return plan_->OutputSchema(); };
 
  private:
+  DistinctKey MakeDistinctKey(const Tuple *tuple, const Schema *schema) {
+    std::vector<Value> keys;
+    uint32_t column_cnt = schema->GetColumnCount();
+
+    for (uint32_t i = 0; i < column_cnt; i++) {
+      keys.emplace_back(tuple->GetValue(child_executor_->GetOutputSchema(), i));
+    }
+    return {keys};
+  }
+
+ private:
   /** The distinct plan node to be executed */
   const DistinctPlanNode *plan_;
   /** The child executor from which tuples are obtained */
   std::unique_ptr<AbstractExecutor> child_executor_;
+
+  std::unordered_set<DistinctKey> us_;
 };
 }  // namespace bustub

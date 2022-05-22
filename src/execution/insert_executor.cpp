@@ -29,12 +29,7 @@ void InsertExecutor::Init() {
     cur_size_ = 0;
   } else {
     child_executor_->Init();
-
-    // schema check
     assert(table_info_->schema_.GetColumnCount() == child_executor_->GetOutputSchema()->GetColumnCount());
-    for (uint32_t i = 0; i < table_info_->schema_.GetColumnCount(); i++) {
-      assert(table_info_->schema_.GetColumn(i).GetType() == child_executor_->GetOutputSchema()->GetColumn(i).GetType());
-    }
   }
 }
 

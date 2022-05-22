@@ -15,9 +15,29 @@
 #include <utility>
 #include <vector>
 
+#include "common/util/hash_util.h"
 #include "execution/plans/abstract_plan.h"
 
 namespace bustub {
+
+struct HashJoinKey {
+  /** The group-by values */
+  std::vector<Value> values_;
+
+  /**
+   * Compares two aggregate keys for equality.
+   * @param other the other aggregate key to be compared with
+   * @return `true` if both aggregate keys have equivalent group-by expressions, `false` otherwise
+   */
+  bool operator==(const HashJoinKey &other) const {
+    for (uint32_t i = 0; i < other.values_.size(); i++) {
+      if (values_[i].CompareEquals(other.values_[i]) != CmpBool::CmpTrue) {
+        return false;
+      }
+    }
+    return true;
+  }
+};
 
 /**
  * Hash join performs a JOIN operation with a hash table.
@@ -66,3 +86,20 @@ class HashJoinPlanNode : public AbstractPlanNode {
 };
 
 }  // namespace bustub
+
+namespace std {
+
+template <>
+struct hash<bustub::HashJoinKey> {
+  std::size_t operator()(const bustub::HashJoinKey &dis_key) const {
+    size_t curr_hash = 0;
+    for (const auto &key : dis_key.values_) {
+      if (!key.IsNull()) {
+        curr_hash = bustub::HashUtil::CombineHashes(curr_hash, bustub::HashUtil::HashValue(&key));
+      }
+    }
+    return curr_hash;
+  }
+};
+
+}  // namespace std

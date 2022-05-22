@@ -36,8 +36,7 @@ bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
       /* we must return tuple with output schema instead of table schema */
       std::vector<Value> values;
       for (auto &output_column : plan_->OutputSchema()->GetColumns()) {
-        values.push_back(
-            tuple->GetValue(&table_info_->schema_, table_info_->schema_.GetColIdx(output_column.GetName())));
+        values.push_back(output_column.GetExpr()->Evaluate(tuple, &table_info_->schema_));
       }
 
       *tuple = Tuple(values, plan_->OutputSchema());
