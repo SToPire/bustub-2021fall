@@ -22,21 +22,14 @@ namespace bustub {
 
 struct HashJoinKey {
   /** The group-by values */
-  std::vector<Value> values_;
+  Value value_;
 
   /**
    * Compares two aggregate keys for equality.
    * @param other the other aggregate key to be compared with
    * @return `true` if both aggregate keys have equivalent group-by expressions, `false` otherwise
    */
-  bool operator==(const HashJoinKey &other) const {
-    for (uint32_t i = 0; i < other.values_.size(); i++) {
-      if (values_[i].CompareEquals(other.values_[i]) != CmpBool::CmpTrue) {
-        return false;
-      }
-    }
-    return true;
-  }
+  bool operator==(const HashJoinKey &other) const { return value_.CompareEquals(other.value_) == CmpBool::CmpTrue; }
 };
 
 /**
@@ -91,14 +84,8 @@ namespace std {
 
 template <>
 struct hash<bustub::HashJoinKey> {
-  std::size_t operator()(const bustub::HashJoinKey &dis_key) const {
-    size_t curr_hash = 0;
-    for (const auto &key : dis_key.values_) {
-      if (!key.IsNull()) {
-        curr_hash = bustub::HashUtil::CombineHashes(curr_hash, bustub::HashUtil::HashValue(&key));
-      }
-    }
-    return curr_hash;
+  std::size_t operator()(const bustub::HashJoinKey &hashkey) const {
+    return bustub::HashUtil::HashValue(&hashkey.value_);
   }
 };
 

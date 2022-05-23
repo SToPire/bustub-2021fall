@@ -25,19 +25,17 @@ AggregationExecutor::AggregationExecutor(ExecutorContext *exec_ctx, const Aggreg
       aht_iterator_(aht_.Begin()) {}
 
 void AggregationExecutor::Init() {
+  Tuple tuple;
+  RID rid;
+
   child_->Init();
-  first_next_ = true;
+  while (child_->Next(&tuple, &rid)) {
+    aht_.InsertCombine(MakeAggregateKey(&tuple), MakeAggregateValue(&tuple));
+  }
+  aht_iterator_ = aht_.Begin();
 }
 
 bool AggregationExecutor::Next(Tuple *tuple, RID *rid) {
-  if (first_next_) {
-    while (child_->Next(tuple, rid)) {
-      aht_.InsertCombine(MakeAggregateKey(tuple), MakeAggregateValue(tuple));
-    }
-    first_next_ = false;
-    aht_iterator_ = aht_.Begin();
-  }
-
   while (aht_iterator_ != aht_.End()) {
     if (plan_->GetHaving() == nullptr ||
         plan_->GetHaving()

@@ -56,15 +56,11 @@ class HashJoinExecutor : public AbstractExecutor {
 
  private:
   HashJoinKey GetLeftJoinKey(const Tuple *tuple) {
-    std::vector<Value> keys;
-    keys.emplace_back(plan_->LeftJoinKeyExpression()->Evaluate(tuple, left_executor_->GetOutputSchema()));
-    return {keys};
+    return {plan_->LeftJoinKeyExpression()->Evaluate(tuple, left_executor_->GetOutputSchema())};
   }
 
   HashJoinKey GetRightJoinKey(const Tuple *tuple) {
-    std::vector<Value> keys;
-    keys.emplace_back(plan_->RightJoinKeyExpression()->Evaluate(tuple, right_executor_->GetOutputSchema()));
-    return {keys};
+    return {plan_->RightJoinKeyExpression()->Evaluate(tuple, right_executor_->GetOutputSchema())};
   }
 
  private:
@@ -73,8 +69,6 @@ class HashJoinExecutor : public AbstractExecutor {
 
   std::unique_ptr<AbstractExecutor> left_executor_;
   std::unique_ptr<AbstractExecutor> right_executor_;
-
-  bool first_next_;
 
   std::unordered_map<HashJoinKey, std::vector<Tuple>> ht_;
 

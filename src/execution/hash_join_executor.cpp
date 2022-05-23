@@ -27,10 +27,12 @@ HashJoinExecutor::HashJoinExecutor(ExecutorContext *exec_ctx, const HashJoinPlan
       right_executor_(std::move(right_child)) {}
 
 void HashJoinExecutor::Init() {
+  Tuple tuple;
+  RID rid;
+
   left_executor_->Init();
   right_executor_->Init();
 
-  first_next_ = true;
   ht_.clear();
 
   column_cnt_ = plan_->OutputSchema()->GetColumnCount();
@@ -38,38 +40,34 @@ void HashJoinExecutor::Init() {
     left_or_right_.push_back(
         static_cast<const ColumnValueExpression *>(plan_->OutputSchema()->GetColumn(i).GetExpr())->GetTupleIdx());
   }
+
+  while (left_executor_->Next(&tuple, &rid)) {
+    HashJoinKey left_key = GetLeftJoinKey(&tuple);
+    if (ht_.find(left_key) == ht_.end()) {
+      ht_.insert({left_key, std::vector<Tuple>()});
+    }
+    ht_[left_key].push_back(tuple);
+  }
+
+  while (right_executor_->Next(&tuple, &rid)) {
+    HashJoinKey right_key = GetRightJoinKey(&tuple);
+    if (ht_.find(right_key) != ht_.end()) {
+      for (Tuple &left_tuple : ht_[right_key]) {
+        std::vector<Value> values;
+        for (uint32_t i = 0; i < column_cnt_; i++) {
+          values.push_back(plan_->OutputSchema()->GetColumn(i).GetExpr()->Evaluate(
+              left_or_right_[i] == 0 ? &left_tuple : &tuple,
+              left_or_right_[i] == 0 ? plan_->GetLeftPlan()->OutputSchema() : plan_->GetRightPlan()->OutputSchema()));
+        }
+        res_.emplace_back(Tuple(values, plan_->OutputSchema()));
+      }
+    }
+  }
+
+  res_iterator_ = res_.begin();
 }
 
 bool HashJoinExecutor::Next(Tuple *tuple, RID *rid) {
-  /* enter upon first Next() invocation */
-  if (first_next_) {
-    while (left_executor_->Next(tuple, rid)) {
-      HashJoinKey left_key = GetLeftJoinKey(tuple);
-      if (ht_.find(left_key) == ht_.end()) {
-        ht_.insert({left_key, std::vector<Tuple>()});
-      }
-      ht_[left_key].push_back(*tuple);
-    }
-
-    while (right_executor_->Next(tuple, rid)) {
-      HashJoinKey right_key = GetRightJoinKey(tuple);
-      if (ht_.find(right_key) != ht_.end()) {
-        for (Tuple &left_tuple : ht_[right_key]) {
-          std::vector<Value> values;
-          for (uint32_t i = 0; i < column_cnt_; i++) {
-            values.push_back(plan_->OutputSchema()->GetColumn(i).GetExpr()->Evaluate(
-                left_or_right_[i] == 0 ? &left_tuple : tuple,
-                left_or_right_[i] == 0 ? plan_->GetLeftPlan()->OutputSchema() : plan_->GetRightPlan()->OutputSchema()));
-          }
-          res_.emplace_back(Tuple(values, plan_->OutputSchema()));
-        }
-      }
-    }
-
-    first_next_ = false;
-    res_iterator_ = res_.begin();
-  }
-
   if (res_iterator_ == res_.end()) {
     return false;
   }

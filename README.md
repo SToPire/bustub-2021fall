@@ -149,3 +149,19 @@ $ docker start -a -i bustub
 ```
 
 to open a shell within the box. You can find Bustub's code mounted at `/bustub` and run the commands mentioned above like normal.
+
+
+
+## Grading
+
+### May 23, 2022 updated
+
+include following extra files when submitting:
+
+1. `src/include/storage/page/tmp_tuple_page.h`
+2. `src/include/execution/plans/hash_join_plan.h`
+3. `src/include/execution/plans/distinct_plan.h`
+
+
+
+lab notes  [here ](https://github.com/SToPire/SToPire.github.io/blob/hexo/source/_posts/15-445-Lab-Report.md)(in Chinese).
