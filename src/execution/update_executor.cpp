@@ -36,6 +36,8 @@ bool UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
       return false;
     }
 
+    exec_ctx_->GetLockManager()->LockExclusive(txn, *rid);
+
     for (auto &index_info : indexes_) {
       index_info->index_->DeleteEntry(tuple->KeyFromTuple(*child_executor_->GetOutputSchema(), index_info->key_schema_,
                                                           index_info->index_->GetKeyAttrs()),

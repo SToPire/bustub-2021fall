@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "execution/executors/seq_scan_executor.h"
+#include "concurrency/transaction.h"
 
 namespace bustub {
 
@@ -28,9 +29,22 @@ void SeqScanExecutor::Init() {
 }
 
 bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
+  Transaction *txn = exec_ctx_->GetTransaction();
+
   while (cur_ != end_) {
     *rid = cur_->GetRid();
+
+    if ((!txn->IsExclusiveLocked(*rid) && !txn->IsSharedLocked(*rid)) &&
+        txn->GetIsolationLevel() != IsolationLevel::READ_UNCOMMITTED) {
+      exec_ctx_->GetLockManager()->LockShared(txn, *rid);
+    }
+
     *tuple = *cur_++;
+
+    if (txn->GetIsolationLevel() == IsolationLevel::READ_COMMITTED && txn->IsSharedLocked(*rid)) {
+      exec_ctx_->GetLockManager()->Unlock(txn, *rid);
+    }
+
     if ((plan_->GetPredicate() == nullptr) ||
         plan_->GetPredicate()->Evaluate(tuple, plan_->OutputSchema()).GetAs<bool>()) {
       /* we must return tuple with output schema instead of table schema */

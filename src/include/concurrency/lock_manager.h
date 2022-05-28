@@ -37,17 +37,16 @@ class LockManager {
 
   class LockRequest {
    public:
-    LockRequest(txn_id_t txn_id, LockMode lock_mode) : txn_id_(txn_id), lock_mode_(lock_mode), granted_(false) {}
+    LockRequest(txn_id_t txn_id, LockMode lock_mode) : txn_id_(txn_id), lock_mode_(lock_mode) {}
 
     txn_id_t txn_id_;
     LockMode lock_mode_;
-    bool granted_;
   };
 
   class LockRequestQueue {
    public:
     std::list<LockRequest>::iterator GetIter(txn_id_t txn_id) {
-      for(auto it = request_queue_.begin(); it != request_queue_.end(); ++it) {
+      for (auto it = request_queue_.begin(); it != request_queue_.end(); ++it) {
         if (it->txn_id_ == txn_id) {
           return it;
         }
@@ -61,7 +60,7 @@ class LockManager {
     // txn_id of an upgrading transaction (if any)
     txn_id_t upgrading_ = INVALID_TXN_ID;
     int shared_cnt_ = 0;
-    bool has_exclusive_ = false;
+    txn_id_t exclusive_ = INVALID_TXN_ID;
   };
 
  public:

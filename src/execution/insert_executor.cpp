@@ -59,6 +59,8 @@ bool InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
     tuple_schema = child_executor_->GetOutputSchema();
   }
 
+  exec_ctx_->GetLockManager()->LockExclusive(txn, *rid);
+
   /* insert successfully, update index */
   for (auto &index_info : indexes_) {
     index_info->index_->InsertEntry(
