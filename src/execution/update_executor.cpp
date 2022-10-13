@@ -31,12 +31,16 @@ bool UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
   Transaction *txn = exec_ctx_->GetTransaction();
 
   if (child_executor_->Next(tuple, rid)) {
+    if (txn->IsSharedLocked(*rid)) {
+      exec_ctx_->GetLockManager()->LockUpgrade(txn, *rid);
+    } else if (!txn->IsExclusiveLocked(*rid)) {
+      exec_ctx_->GetLockManager()->LockExclusive(txn, *rid);
+    }
+
     new_tuple = GenerateUpdatedTuple(*tuple);
     if (!table_info_->table_->UpdateTuple(new_tuple, *rid, txn)) {
       return false;
     }
-
-    exec_ctx_->GetLockManager()->LockExclusive(txn, *rid);
 
     for (auto &index_info : indexes_) {
       index_info->index_->DeleteEntry(tuple->KeyFromTuple(*child_executor_->GetOutputSchema(), index_info->key_schema_,
