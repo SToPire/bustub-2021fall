@@ -164,4 +164,4 @@ include following extra files when submitting:
 
 
 
-lab notes  [here ](https://github.com/SToPire/SToPire.github.io/blob/hexo/source/_posts/15-445-Lab-Report.md)(in Chinese).
+lab notes  [here ](https://stopire.github.io/2022/04/05/15-445-Lab-Report/)(in Chinese).
