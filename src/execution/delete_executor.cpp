@@ -30,13 +30,19 @@ void DeleteExecutor::Init() {
 bool DeleteExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
   Transaction *txn = exec_ctx_->GetTransaction();
   if (child_executor_->Next(tuple, rid)) {
+    if (txn->IsSharedLocked(*rid)) {
+      exec_ctx_->GetLockManager()->LockUpgrade(txn, *rid);
+    } else if (!txn->IsExclusiveLocked(*rid)) {
+      exec_ctx_->GetLockManager()->LockExclusive(txn, *rid);
+    }
+
     if (!table_info_->table_->MarkDelete(*rid, txn)) {
       return false;
     }
 
-    exec_ctx_->GetLockManager()->LockExclusive(txn, *rid);
-
     for (auto &index_info : indexes_) {
+      txn->AppendIndexWriteRecord(IndexWriteRecord(*rid, table_info_->oid_, WType::DELETE, *tuple,
+                                                   index_info->index_oid_, exec_ctx_->GetCatalog()));
       index_info->index_->DeleteEntry(tuple->KeyFromTuple(*child_executor_->GetOutputSchema(), index_info->key_schema_,
                                                           index_info->index_->GetKeyAttrs()),
                                       *rid, txn);

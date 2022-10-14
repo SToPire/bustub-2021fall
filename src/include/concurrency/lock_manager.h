@@ -39,6 +39,10 @@ class LockManager {
    public:
     LockRequest(txn_id_t txn_id, LockMode lock_mode) : txn_id_(txn_id), lock_mode_(lock_mode) {}
 
+    /* A lock may be invalidated by other transactions via updating `exclusive_` and `shared_cnt_` of its queue.
+     * In this case, these 2 fields of its queue should not be updated redundantly while unlocking the clock.
+     * We use `valid_` field to identify this case.*/
+    bool valid_{true};
     txn_id_t txn_id_;
     LockMode lock_mode_;
   };
@@ -59,6 +63,9 @@ class LockManager {
     std::condition_variable cv_;
     // txn_id of an upgrading transaction (if any)
     txn_id_t upgrading_ = INVALID_TXN_ID;
+
+    /* Use them to detect {how many readers, who is the writer} of this queue.
+     * Otherwise, we will suffer from iterating the queue each time trying to grab a lock.*/
     int shared_cnt_ = 0;
     txn_id_t exclusive_ = INVALID_TXN_ID;
   };

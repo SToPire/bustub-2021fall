@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 #include <memory>
 
+#include "concurrency/transaction.h"
 #include "execution/executors/update_executor.h"
 
 namespace bustub {
@@ -43,6 +44,9 @@ bool UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
     }
 
     for (auto &index_info : indexes_) {
+      txn->AppendIndexWriteRecord(IndexWriteRecord(*rid, table_info_->oid_, WType::UPDATE, new_tuple,
+                                                   index_info->index_oid_, exec_ctx_->GetCatalog(), *tuple));
+
       index_info->index_->DeleteEntry(tuple->KeyFromTuple(*child_executor_->GetOutputSchema(), index_info->key_schema_,
                                                           index_info->index_->GetKeyAttrs()),
                                       *rid, txn);

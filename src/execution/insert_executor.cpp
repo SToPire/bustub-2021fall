@@ -12,6 +12,7 @@
 
 #include <memory>
 
+#include "concurrency/transaction.h"
 #include "execution/executors/insert_executor.h"
 
 namespace bustub {
@@ -59,10 +60,16 @@ bool InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
     tuple_schema = child_executor_->GetOutputSchema();
   }
 
-  exec_ctx_->GetLockManager()->LockExclusive(txn, *rid);
+  if (txn->IsSharedLocked(*rid)) {
+    exec_ctx_->GetLockManager()->LockUpgrade(txn, *rid);
+  } else if (!txn->IsExclusiveLocked(*rid)) {
+    exec_ctx_->GetLockManager()->LockExclusive(txn, *rid);
+  }
 
   /* insert successfully, update index */
   for (auto &index_info : indexes_) {
+    txn->AppendIndexWriteRecord(IndexWriteRecord(*rid, table_info_->oid_, WType::INSERT, *tuple, index_info->index_oid_,
+                                                 exec_ctx_->GetCatalog()));
     index_info->index_->InsertEntry(
         tuple->KeyFromTuple(*tuple_schema, index_info->key_schema_, index_info->index_->GetKeyAttrs()), *rid, txn);
   }
